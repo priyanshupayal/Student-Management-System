@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Management System</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f5f5f5;
+    }
+
+    h2 {
+      margin-top: 30px;
+    }
+
+    input {
+      display: block;
+      margin: 8px 0;
+      padding: 8px;
+      width: 250px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    input.error {
+      border-color: #d32f2f;
+      background-color: #ffebee;
+    }
+
+    .error-msg {
+      color: #d32f2f;
+      font-size: 12px;
+      margin-top: -5px;
+      margin-bottom: 8px;
+    }
+
+    button {
+      padding: 8px 12px;
+      margin-top: 10px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #0056b3;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    button.delete-btn {
+      background-color: #d32f2f;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    button.delete-btn:hover:not(:disabled) {
+      background-color: #b71c1c;
+    }
+
+    table {
+      margin-top: 20px;
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background: #333;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f9f9f9;
+    }
+
+    .alert {
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .alert.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      display: block;
+    }
+
+    .alert.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      display: block;
+    }
+
+    .spinner {
+      display: none;
+      margin-left: 8px;
+    }
+
+    .spinner.show {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #fff;
+      border-top: 2px solid transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .pagination {
+      display: flex;
+      gap: 8px;
+      margin-top: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .pagination button {
+      padding: 8px 12px;
+      margin: 0;
+      margin-top: 0;
+    }
+
+    .pagination button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .pagination-info {
+      font-size: 14px;
+      color: #666;
+      margin-left: 10px;
+    }
+
+    .page-size-control {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    .page-size-control select {
+      padding: 5px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+
+    .cache-status {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h1>Student Management System</h1>
+
+    <div id="alertContainer"></div>
+
+    <!-- CREATE STUDENT -->
+    <h2>Add Student</h2>
+
+    <input id="name" placeholder="Full Name" />
+    <div id="nameError" class="error-msg"></div>
+
+    <input id="email" placeholder="Email" />
+    <div id="emailError" class="error-msg"></div>
+
+    <input id="course" placeholder="Course Name" />
+    <div id="courseError" class="error-msg"></div>
+
+    <input id="age" placeholder="Age" type="number" />
+    <div id="ageError" class="error-msg"></div>
+
+    <input id="phone" placeholder="Phone Number" />
+    <div id="phoneError" class="error-msg"></div>
+
+    <button id="addBtn" onclick="addStudent()">
+      Add Student
+      <span id="addSpinner" class="spinner"></span>
+    </button>
+
+    <!-- STUDENT LIST -->
+    <h2>Students List</h2>
+    <button id="loadBtn" onclick="loadStudents()">
+      Load Students
+      <span id="loadSpinner" class="spinner"></span>
+    </button>
+
+    <div class="page-size-control">
+      Page size:
+      <select id="pageSize" title="Page size" onchange="changePageSize()">
+        <option value="5">5 per page</option>
+        <option value="10" selected>10 per page</option>
+        <option value="25">25 per page</option>
+        <option value="50">50 per page</option>
+      </select>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Course</th>
+          <th>Age</th>
+          <th>Phone</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+
+    <div class="pagination">
+      <button id="prevBtn" onclick="previousPage()" disabled>← Previous</button>
+      <span class="pagination-info">
+        Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+        (<span id="totalCount">0</span> students)
+      </span>
+      <button id="nextBtn" onclick="nextPage()" disabled>Next →</button>
+      <div id="cacheStatus" class="cache-status"></div>
+    </div>
+  </div>
+
+<script>
+const API = window.API_URL || "http://localhost:3000/api/students";
+
+// State for pagination
+let currentPage = 1;
+let pageSize = 10;
+let totalPages = 1;
+let totalCount = 0;
+
+// Validation functions
+function validateEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function validatePhone(phone) {
+  const phoneRegex = /^[\d\s\-\+\(\)]{10,}$/;
+  return phoneRegex.test(phone);
+}
+
+function clearErrors() {
+  document.getElementById("nameError").textContent = "";
+  document.getElementById("emailError").textContent = "";
+  document.getElementById("courseError").textContent = "";
+  document.getElementById("ageError").textContent = "";
+  document.getElementById("phoneError").textContent = "";
+  
+  document.getElementById("name").classList.remove("error");
+  document.getElementById("email").classList.remove("error");
+  document.getElementById("course").classList.remove("error");
+  document.getElementById("age").classList.remove("error");
+  document.getElementById("phone").classList.remove("error");
+}
+
+function showValidationError(fieldId, message) {
+  document.getElementById(fieldId).classList.add("error");
+  document.getElementById(fieldId + "Error").textContent = message;
+}
+
+function validateStudentForm() {
+  clearErrors();
+  let isValid = true;
+
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const course = document.getElementById("course").value.trim();
+  const age = document.getElementById("age").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+
+  if (!name) {
+    showValidationError("name", "Full name is required");
+    isValid = false;
+  }
+
+  if (!email) {
+    showValidationError("email", "Email is required");
+    isValid = false;
+  } else if (!validateEmail(email)) {
+    showValidationError("email", "Invalid email format");
+    isValid = false;
+  }
+
+  if (!course) {
+    showValidationError("course", "Course name is required");
+    isValid = false;
+  }
+
+  if (!age) {
+    showValidationError("age", "Age is required");
+    isValid = false;
+  } else if (isNaN(age) || age < 15 || age > 100) {
+    showValidationError("age", "Age must be a number between 15 and 100");
+    isValid = false;
+  }
+
+  if (!phone) {
+    showValidationError("phone", "Phone number is required");
+    isValid = false;
+  } else if (!validatePhone(phone)) {
+    showValidationError("phone", "Phone number must have at least 10 digits");
+    isValid = false;
+  }
+
+  return isValid;
+}
+
+function showAlert(message, type) {
+  const container = document.getElementById("alertContainer");
+  const alert = document.createElement("div");
+  alert.className = `alert ${type}`;
+  alert.textContent = message;
+  container.innerHTML = "";
+  container.appendChild(alert);
+  setTimeout(() => {
+    alert.style.display = "none";
+  }, 5000);
+}
+
+/* CREATE STUDENT */
+async function addStudent() {
+  if (!validateStudentForm()) {
+    return;
+  }
+
+  const data = {
+    full_name: document.getElementById("name").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    course_name: document.getElementById("course").value.trim(),
+    age: parseInt(document.getElementById("age").value),
+    phone_number: document.getElementById("phone").value.trim(),
+  };
+
+  const addBtn = document.getElementById("addBtn");
+  const addSpinner = document.getElementById("addSpinner");
+  
+  addBtn.disabled = true;
+  addSpinner.classList.add("show");
+
+  try {
+    const res = await fetch(API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      showAlert(error.message || "Failed to add student", "error");
+      return;
+    }
+
+    const result = await res.json();
+    showAlert("Student added successfully", "success");
+    
+    // Clear form
+    document.getElementById("name").value = "";
+    document.getElementById("email").value = "";
+    document.getElementById("course").value = "";
+    document.getElementById("age").value = "";
+    document.getElementById("phone").value = "";
+    clearErrors();
+    
+    await loadStudents();
+  } catch (err) {
+    console.error("Error adding student:", err);
+    showAlert("Network error: " + err.message, "error");
+  } finally {
+    addBtn.disabled = false;
+    addSpinner.classList.remove("show");
+  }
+}
+
+/* READ STUDENTS (with pagination) */
+async function loadStudents(page = 1) {
+  currentPage = page;
+  const loadBtn = document.getElementById("loadBtn");
+  const loadSpinner = document.getElementById("loadSpinner");
+  
+  loadBtn.disabled = true;
+  loadSpinner.classList.add("show");
+
+  try {
+    const offset = (currentPage - 1) * pageSize;
+    const url = `${API}?limit=${pageSize}&offset=${offset}`;
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+
+    const response = await res.json();
+    
+    // Check for cache hit indicator (set by caching middleware)
+    const cacheStatus = res.headers.get('X-Cache');
+    if (cacheStatus) {
+      document.getElementById("cacheStatus").textContent = `Cache: ${cacheStatus}`;
+    }
+
+    // Handle new response format with pagination
+    const students = response.data || response;
+    const pagination = response.pagination;
+
+    // Update pagination state
+    if (pagination) {
+      totalCount = pagination.total;
+      totalPages = pagination.pages;
+      currentPage = pagination.page;
+      
+      // Update UI
+      document.getElementById("currentPage").textContent = currentPage;
+      document.getElementById("totalPages").textContent = totalPages;
+      document.getElementById("totalCount").textContent = totalCount;
+      
+      // Update buttons
+      document.getElementById("prevBtn").disabled = !pagination.hasPrevPage;
+      document.getElementById("nextBtn").disabled = !pagination.hasNextPage;
+    }
+
+    const table = document.getElementById("tableBody");
+    table.innerHTML = "";
+
+    if (!Array.isArray(students) || students.length === 0) {
+      const row = table.insertRow();
+      row.innerHTML = '<td colspan="7" style="text-align: center; color: #999;">No students found</td>';
+      return;
+    }
+
+    students.forEach(s => {
+      const row = table.insertRow();
+      row.innerHTML = `
+        <td>${escapeHtml(String(s.student_id))}</td>
+        <td>${escapeHtml(s.full_name)}</td>
+        <td>${escapeHtml(s.email)}</td>
+        <td>${escapeHtml(s.course_name)}</td>
+        <td>${escapeHtml(String(s.age))}</td>
+        <td>${escapeHtml(s.phone_number)}</td>
+        <td>
+          <button class="delete-btn" onclick="deleteStudent(${s.student_id})">Delete</button>
+        </td>
+      `;
+    });
+  } catch (err) {
+    console.error("Error loading students:", err);
+    showAlert("Failed to load students: " + err.message, "error");
+    const table = document.getElementById("tableBody");
+    table.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #d32f2f;">Error loading students</td></tr>';
+  } finally {
+    loadBtn.disabled = false;
+    loadSpinner.classList.remove("show");
+  }
+}
+
+// Pagination navigation functions
+function previousPage() {
+  if (currentPage > 1) {
+    loadStudents(currentPage - 1);
+  }
+}
+
+function nextPage() {
+  if (currentPage < totalPages) {
+    loadStudents(currentPage + 1);
+  }
+}
+
+function changePageSize() {
+  pageSize = parseInt(document.getElementById("pageSize").value);
+  currentPage = 1; // Reset to first page when changing page size
+  loadStudents();
+}
+
+/* DELETE STUDENT */
+async function deleteStudent(id) {
+  if (!confirm(`Are you sure you want to delete this student? This action cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/${id}`, {
+      method: "DELETE"
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      showAlert(error.message || "Failed to delete student", "error");
+      return;
+    }
+
+    showAlert("Student deleted successfully", "success");
+    await loadStudents();
+  } catch (err) {
+    console.error("Error deleting student:", err);
+    showAlert("Network error: " + err.message, "error");
+  }
+}
+
+// Helper function to prevent XSS
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Load students on page load
+document.addEventListener("DOMContentLoaded", loadStudents);
+</script>
+
+</body>
+</html>
